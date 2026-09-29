@@ -3,6 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import URL, create_engine
+from sqlalchemy.orm import sessionmaker
 
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -27,3 +28,16 @@ DATABASE_URL = URL.create(
 
 
 engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
