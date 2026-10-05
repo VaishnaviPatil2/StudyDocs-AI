@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.api.auth import router as auth_router
 from app.api.users import router as users_router
+from app.api.courses import router as courses_router
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.models.user import User
@@ -13,6 +14,7 @@ app = FastAPI(title="StudyDocs AI API")
 
 app.include_router(auth_router)
 app.include_router(users_router)
+app.include_router(courses_router)
 
 
 @app.get("/")
