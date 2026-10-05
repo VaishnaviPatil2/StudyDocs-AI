@@ -7,6 +7,7 @@ from alembic import context
 from app.core.database import engine
 from app.models.base import Base
 from app.models.user import User
+from app.models.course import Course
 
 
 config = context.config
