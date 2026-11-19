@@ -26,10 +26,17 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        # Build URL without the password — password is passed via connect_args
+        # to avoid URL-encoding issues with special characters (e.g. @ in password)
         return (
-            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql+psycopg://{self.postgres_user}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def db_connect_args(self) -> dict:
+        """Pass password directly to psycopg to avoid URL-encoding issues."""
+        return {"password": self.postgres_password}
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     jwt_secret_key: str
