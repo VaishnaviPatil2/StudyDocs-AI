@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import ForeignKey, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,7 +43,7 @@ class DocumentChunk(Base):
     )
 
     # 384-dimensional vector for BAAI/bge-small-en-v1.5
-    embedding: Mapped[list | None] = mapped_column(
+    embedding: Mapped[Any] = mapped_column(
         _vector_type(384) if _vector_type else Text,
         nullable=True,
         comment="BGE-small-en-v1.5 embedding vector",

@@ -60,7 +60,8 @@ def ingest_document(doc: Document, db: Session) -> None:
             )
             for chunk, embedding in zip(chunks, embeddings)
         ]
-        db.bulk_save_objects(db_chunks)
+        # Step 4: persist chunks to DB using add_all (SQLAlchemy 2.x standard)
+        db.add_all(db_chunks)
 
         # Step 5: mark document as ready
         doc.page_count = total_pages
