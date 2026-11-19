@@ -5,8 +5,9 @@ from alembic import context
 
 from app.core.database import engine
 
-# Import Base — this triggers all model registrations via base.py
-from app.models.base import Base  # noqa: F401 — registers all models
+# Import all models so Alembic autogenerate can detect schema changes
+import app.models  # noqa: F401 — registers User, Course, Document, DocumentChunk
+from app.models.base import Base
 
 config = context.config
 
