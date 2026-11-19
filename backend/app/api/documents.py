@@ -1,5 +1,5 @@
 """Documents API: upload PDFs and retrieve document metadata."""
-from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Path, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -12,6 +12,7 @@ from app.services.document_service import (
     list_documents_for_course,
     save_upload,
 )
+from app.services.ingestion_service import ingest_document
 
 router = APIRouter(prefix="/courses/{course_id}/documents", tags=["Documents"])
 
@@ -37,6 +38,7 @@ def _get_course_or_404(course_id: int, db: Session) -> Course:
 def upload_document(
     course_id: int = Path(..., gt=0),
     file: UploadFile = File(..., description="PDF file to upload"),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
@@ -62,6 +64,10 @@ def upload_document(
         uploaded_by=int(current_user["sub"]),
         db=db,
     )
+
+    # Kick off ingestion in the background (non-blocking for the HTTP response)
+    background_tasks.add_task(ingest_document, doc, db)
+
     return doc
 
 
