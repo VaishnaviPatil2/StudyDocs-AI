@@ -1,42 +1,27 @@
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-from sqlalchemy import URL, create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from app.core.config import get_settings
 
-BASE_DIR = Path(__file__).resolve().parents[3]
-load_dotenv(BASE_DIR / ".env")
+settings = get_settings()
 
-
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-
-
-DATABASE_URL = URL.create(
-    drivername="postgresql+psycopg",
-    username=POSTGRES_USER,
-    password=POSTGRES_PASSWORD,
-    host=POSTGRES_HOST,
-    port=POSTGRES_PORT,
-    database=POSTGRES_DB,
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,       # drop stale connections automatically
+    pool_size=10,
+    max_overflow=20,
 )
 
-
-engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
     autocommit=False,
 )
 
-def get_db():
-    db = SessionLocal()
 
+def get_db():
+    """FastAPI dependency: yields a database session."""
+    db = SessionLocal()
     try:
         yield db
     finally:

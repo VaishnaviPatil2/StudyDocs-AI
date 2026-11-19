@@ -1,64 +1,50 @@
-from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy.exc import IntegrityError
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
-from app.api.users import router as users_router
 from app.api.courses import router as courses_router
-from app.core.database import get_db
-from app.core.security import hash_password
-from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
+from app.api.users import router as users_router
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
-app = FastAPI(title="StudyDocs AI API")
-
-app.include_router(auth_router)
-app.include_router(users_router)
-app.include_router(courses_router)
-
-
-@app.get("/")
-def root():
-    return {"message": "StudyDocs AI API is running"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    yield
+    # shutdown
 
 
-@app.get("/db-test")
-def db_test(db=Depends(get_db)):
-    return {"message": "Database session received"}
-
-
-@app.post(
-    "/users",
-    response_model=UserResponse,
-    status_code=201,
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="AI-powered document Q&A system using RAG (Retrieval-Augmented Generation)",
+    lifespan=lifespan,
 )
-def create_user(
-    user: UserCreate,
-    db=Depends(get_db),
-):
-    password_hash = hash_password(user.password)
 
-    user_db = User(
-        name=user.name,
-        email=user.email,
-        password_hash=password_hash,
-    )
+# ── CORS ──────────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # Vite dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    db.add(user_db)
+# ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(auth_router,    prefix="/api/v1")
+app.include_router(users_router,   prefix="/api/v1")
+app.include_router(courses_router, prefix="/api/v1")
 
-    try:
-        db.commit()
-        db.refresh(user_db)
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Email already registered",
-        )
 
-    return {
-        "id": user_db.id,
-        "name": user_db.name,
-        "email": user_db.email,
-        "role": user_db.role,
-    }
+@app.get("/", tags=["Health"])
+def root():
+    return {"status": "ok", "app": settings.app_name, "version": settings.app_version}
+
+
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "healthy"}

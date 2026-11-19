@@ -1,84 +1,39 @@
-import os
 from datetime import datetime, timedelta, timezone
 
-from dotenv import load_dotenv
-from pwdlib import PasswordHash
 import jwt
+from pwdlib import PasswordHash
+
+from app.core.config import get_settings
+
+settings = get_settings()
+
+_password_hash = PasswordHash.recommended()
 
 
-load_dotenv()
+def hash_password(plain: str) -> str:
+    return _password_hash.hash(plain)
 
 
-password_hash = PasswordHash.recommended()
+def verify_password(plain: str, hashed: str) -> bool:
+    return _password_hash.verify(plain, hashed)
 
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-JWT_ALGORITHM = os.getenv(
-    "JWT_ALGORITHM",
-    "HS256",
-)
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv(
-        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
-        "30",
+def create_access_token(data: dict) -> str:
+    payload = data.copy()
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.jwt_access_token_expire_minutes
     )
-)
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def hash_password(password: str) -> str:
-    return password_hash.hash(password)
-
-
-def verify_password(
-    plain_password: str,
-    hashed_password: str,
-) -> bool:
-    return password_hash.verify(
-        plain_password,
-        hashed_password,
-    )
-
-
-def create_access_token(
-    data: dict,
-) -> str:
-    to_encode = data.copy()
-
-    expire = datetime.now(
-        timezone.utc
-    ) + timedelta(
-        minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-
-    to_encode.update(
-        {
-            "exp": expire,
-        }
-    )
-
-    token = jwt.encode(
-        to_encode,
-        JWT_SECRET_KEY,
-        algorithm=JWT_ALGORITHM,
-    )
-
-    return token
-
-
-def verify_access_token(
-    token: str,
-):
+def decode_access_token(token: str) -> dict | None:
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
-            JWT_SECRET_KEY,
-            algorithms=[JWT_ALGORITHM],
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
         )
-
-        return payload
-
     except jwt.ExpiredSignatureError:
         return None
-
     except jwt.InvalidTokenError:
         return None
