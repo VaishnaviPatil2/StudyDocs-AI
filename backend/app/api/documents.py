@@ -38,7 +38,7 @@ def _get_course_or_404(course_id: int, db: Session) -> Course:
 def upload_document(
     course_id: int = Path(..., gt=0),
     file: UploadFile = File(..., description="PDF file to upload"),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
+    background_tasks: BackgroundTasks = None,  # type: ignore[assignment]
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
