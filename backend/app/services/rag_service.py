@@ -81,29 +81,32 @@ def _build_context(chunks: list[DocumentChunk], db: Session) -> tuple[str, list[
 
 
 def _call_groq(context: str, question: str) -> str:
-    """Call Groq API via langchain-groq and return the answer string."""
+    """Call Groq API using the official groq SDK and return the answer string."""
     try:
-        from langchain_groq import ChatGroq  # type: ignore
+        from groq import Groq  # type: ignore
     except ImportError as exc:
         raise RuntimeError(
-            "langchain-groq is not installed. Run: pip install langchain-groq"
+            "groq SDK is not installed. Run: pip install groq"
         ) from exc
 
-    from langchain_core.messages import HumanMessage, SystemMessage
+    client = Groq(api_key=settings.groq_api_key)
 
-    llm = ChatGroq(
-        api_key=settings.groq_api_key,
+    completion = client.chat.completions.create(
         model=settings.groq_model,
+        messages=[
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": _HUMAN_TEMPLATE.format(
+                    context=context, question=question
+                ),
+            },
+        ],
         temperature=0.2,
+        max_tokens=1024,
     )
 
-    messages = [
-        SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=_HUMAN_TEMPLATE.format(context=context, question=question)),
-    ]
-
-    response = llm.invoke(messages)
-    return response.content
+    return completion.choices[0].message.content
 
 
 def answer_question(
