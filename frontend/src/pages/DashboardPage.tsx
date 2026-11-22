@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom"
 import { BookOpen, Plus, ChevronRight, FileText } from "lucide-react"
 import { coursesApi } from "@/api/courses"
-import { useAuth } from "@/context/AuthContext"
+import { useAuth } from "@/hooks/useAuth"
 import type { Course } from "@/types"
 
 export function DashboardPage() {

@@ -30,10 +30,17 @@ export function DocumentsPage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { coursesApi.list().then(setCourses) }, [])
+
   useEffect(() => {
     if (!selectedCourse) return
-    setLoadingDocs(true)
-    documentsApi.list(selectedCourse).then(setDocuments).finally(() => setLoadingDocs(false))
+    let cancelled = false
+    documentsApi.list(selectedCourse).then((data) => {
+      if (!cancelled) {
+        setDocuments(data)
+        setLoadingDocs(false)
+      }
+    })
+    return () => { cancelled = true }
   }, [selectedCourse])
   useEffect(() => {
     const busy = documents.some(d => d.status === "pending" || d.status === "processing")
@@ -67,7 +74,7 @@ export function DocumentsPage() {
         <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#4a5568" }}>Select Course</p>
         <div className="flex flex-wrap gap-2">
           {courses.map(c => (
-            <button key={c.id} onClick={() => setSelectedCourse(c.id)} className="px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all" style={selectedCourse === c.id ? { background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.4)" } : { background: "#161b27", color: "#64748b", border: "1px solid #1e2433" }}>
+            <button key={c.id} onClick={() => { setSelectedCourse(c.id); setLoadingDocs(true); setDocuments([]) }} className="px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all" style={selectedCourse === c.id ? { background: "rgba(99,102,241,0.2)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.4)" } : { background: "#161b27", color: "#64748b", border: "1px solid #1e2433" }}>
               {c.name}
             </button>
           ))}

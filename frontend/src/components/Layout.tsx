@@ -1,6 +1,6 @@
 ﻿import { BookOpen, FileText, LogOut, MessageSquare, User } from "lucide-react"
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
-import { useAuth } from "@/context/AuthContext"
+import { useAuth } from "@/hooks/useAuth"
 
 const nav = [
   { to: "/dashboard", icon: BookOpen, label: "Courses" },
