@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { BookOpen, Plus, ChevronRight, Users, FileText } from "lucide-react"
+import { BookOpen, Plus, ChevronRight, FileText } from "lucide-react"
 import { coursesApi } from "@/api/courses"
 import { useAuth } from "@/context/AuthContext"
 import type { Course } from "@/types"
