@@ -40,7 +40,11 @@ class Document(Base):
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     status: Mapped[DocumentStatus] = mapped_column(
-        SAEnum(DocumentStatus, name="document_status"),
+        SAEnum(
+            DocumentStatus,
+            name="document_status",
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=DocumentStatus.PENDING,
         server_default=DocumentStatus.PENDING.value,

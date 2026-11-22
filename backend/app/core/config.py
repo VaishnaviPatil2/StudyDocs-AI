@@ -56,7 +56,7 @@ class Settings(BaseSettings):
 
     # ── Groq LLM ─────────────────────────────────────────────────────────────
     groq_api_key: str = ""
-    groq_model: str = "llama3-8b-8192"
+    groq_model: str = "openai/gpt-oss-20b"
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
