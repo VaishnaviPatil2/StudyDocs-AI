@@ -77,8 +77,13 @@ export function ChatPage() {
   useEffect(() => { coursesApi.list().then(setCourses) }, [])
   useEffect(() => {
     if (!selectedCourse) return
-    setSelectedDoc(null)
-    documentsApi.list(selectedCourse).then(ds => setDocuments(ds.filter(d => d.status === "ready")))
+    // Reset selected doc and fetch documents for new course
+    documentsApi
+      .list(selectedCourse)
+      .then((ds) => {
+        setSelectedDoc(null)
+        setDocuments(ds.filter((d) => d.status === 'ready'))
+      })
   }, [selectedCourse])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }) }, [messages])
 

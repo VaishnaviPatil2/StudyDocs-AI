@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useEffect, useState, type ReactNode } from 'react'
 import { authApi } from '@/api/auth'
 import type { User } from '@/types'
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: User | null
   token: string | null
   isLoading: boolean
@@ -10,29 +10,36 @@ interface AuthContextValue {
   logout: () => void
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+// oxlint-disable-next-line react/only-export-components -- context + provider must coexist
+export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(
     localStorage.getItem('access_token'),
   )
-  const [isLoading, setIsLoading] = useState(true)
+
+  // Derive loading from token+user instead of calling setState inside effect
+  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    if (token) {
-      authApi
-        .me()
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem('access_token')
-          setToken(null)
-        })
-        .finally(() => setIsLoading(false))
-    } else {
-      setIsLoading(false)
+    if (!token) {
+      setInitialized(true)
+      return
     }
-  }, [token])
+    authApi
+      .me()
+      .then((me) => {
+        setUser(me)
+        setInitialized(true)
+      })
+      .catch(() => {
+        localStorage.removeItem('access_token')
+        setToken(null)
+        setInitialized(true)
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function login(newToken: string) {
     localStorage.setItem('access_token', newToken)
@@ -48,14 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading: !initialized, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>')
-  return ctx
 }
