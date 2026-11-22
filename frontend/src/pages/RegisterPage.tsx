@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
 import type { AxiosError } from 'axios'
@@ -31,7 +31,8 @@ export function RegisterPage() {
     }
   }
 
-  const fieldCls = 'w-full rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none'
+  const fieldCls =
+    'w-full rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none'
   const fieldStyle = { background: '#1e2433', border: '1px solid #2d3748' }
 
   return (
@@ -46,12 +47,20 @@ export function RegisterPage() {
             className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, #818cf8, #6366f1)' }}
           >
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              className="w-5 h-5 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13
+                   C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253
+                   m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13
+                   C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
               />
             </svg>
           </div>
@@ -63,14 +72,17 @@ export function RegisterPage() {
           Start learning smarter today
         </p>
 
-        {/* Card */}
+        {/* Form card */}
         <div
           className="rounded-2xl p-8"
           style={{ background: '#161b27', border: '1px solid #1e2433' }}
         >
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#94a3b8' }}>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: '#94a3b8' }}
+              >
                 Full name
               </label>
               <input
@@ -86,7 +98,10 @@ export function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#94a3b8' }}>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: '#94a3b8' }}
+              >
                 Email
               </label>
               <input
@@ -101,7 +116,10 @@ export function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: '#94a3b8' }}>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: '#94a3b8' }}
+              >
                 Password
               </label>
               <input
@@ -115,7 +133,7 @@ export function RegisterPage() {
               />
             </div>
 
-            {error && (
+            {error !== '' && (
               <div
                 className="rounded-xl px-4 py-3 text-sm"
                 style={{
