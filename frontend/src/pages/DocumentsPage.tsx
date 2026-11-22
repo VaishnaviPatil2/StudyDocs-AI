@@ -43,9 +43,24 @@ export function DocumentsPage() {
     return () => { cancelled = true }
   }, [selectedCourse])
   useEffect(() => {
-    const busy = documents.some(d => d.status === "pending" || d.status === "processing")
+    const busy = documents.some((d) => d.status === 'pending' || d.status === 'processing')
     if (!busy || !selectedCourse) return
-    const t = setInterval(() => documentsApi.list(selectedCourse).then(setDocuments), 3000)
+    let attempts = 0
+    const MAX_ATTEMPTS = 20 // stop after 60 seconds (20 × 3s)
+    const t = setInterval(() => {
+      attempts++
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(t)
+        return
+      }
+      documentsApi.list(selectedCourse).then((data) => {
+        setDocuments(data)
+        const stillBusy = data.some(
+          (d) => d.status === 'pending' || d.status === 'processing',
+        )
+        if (!stillBusy) clearInterval(t)
+      })
+    }, 3000)
     return () => clearInterval(t)
   }, [documents, selectedCourse])
 
