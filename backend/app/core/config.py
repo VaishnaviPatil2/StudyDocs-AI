@@ -52,11 +52,14 @@ class Settings(BaseSettings):
     embedding_dimension: int = 384
     chunk_size: int = 500
     chunk_overlap: int = 50
-    retrieval_top_k: int = 5
+    retrieval_top_k: int = 8
 
     # ── Groq LLM ─────────────────────────────────────────────────────────────
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-20b"
+
+    # ── Hugging Face (embeddings) ──────────────────────────────────────────────
+    hf_api_key: str = ""  # optional — HF free tier works without a key (rate-limited)
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"

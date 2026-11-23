@@ -1,16 +1,24 @@
 from pydantic import BaseModel, Field
 
 
+class ChatHistoryItem(BaseModel):
+    role: str = Field(description="'user' or 'assistant'")
+    content: str
+
+
 class QueryRequest(BaseModel):
     question: str = Field(
-        min_length=5,
-        max_length=1000,
+        min_length=1,
+        max_length=2000,
         description="The question to ask about the uploaded documents",
-        examples=["What is the main topic of this document?"],
     )
     document_id: int | None = Field(
         default=None,
         description="Restrict search to a specific document (optional)",
+    )
+    history: list[ChatHistoryItem] = Field(
+        default_factory=list,
+        description="Previous conversation turns for follow-up question rewriting",
     )
 
 
@@ -26,3 +34,4 @@ class QueryResponse(BaseModel):
     sources: list[SourceCitationResponse]
     model: str
     question: str
+    rewritten_query: str = ""

@@ -22,11 +22,18 @@ export interface SourceCitation {
   page_number: number | null; chunk_excerpt: string
 }
 
-export interface QueryRequest { question: string; document_id?: number | null }
+export interface ChatHistoryItem { role: string; content: string }
+
+export interface QueryRequest {
+  question: string
+  document_id?: number | null
+  history?: ChatHistoryItem[]
+}
 
 export interface QueryResponse {
   answer: string; sources: SourceCitation[]
   model: string; question: string
+  rewritten_query?: string
 }
 
 export interface ApiError { detail: string }

@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { marked } from 'marked'
 import { queryApi } from '@/api/query'
 import type { Course, Document, SourceCitation } from '@/types'
+
+// Configure marked for safe, clean output
+marked.setOptions({ breaks: true, gfm: true })
 
 interface Message {
   id: string
@@ -8,12 +12,23 @@ interface Message {
   text: string
   sources?: SourceCitation[]
   loading?: boolean
+  rewrittenQuery?: string
 }
 
 interface Props {
   course: Course | null
   readyDocs: Document[]
   defaultDocId: number | null
+}
+
+function MarkdownContent({ text }: { text: string }) {
+  const html = marked.parse(text) as string
+  return (
+    <div
+      className="md-content"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
 }
 
 function SourceList({ sources }: { sources: SourceCitation[] }) {
@@ -28,7 +43,8 @@ function SourceList({ sources }: { sources: SourceCitation[] }) {
           <path strokeLinecap="round" d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
         </svg>
         {sources.length} source{sources.length !== 1 ? 's' : ''}
-        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+          style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
           <path strokeLinecap="round" d="M9 18l6-6-6-6" />
         </svg>
       </button>
@@ -39,7 +55,11 @@ function SourceList({ sources }: { sources: SourceCitation[] }) {
               <div style={{ fontSize: 11, color: '#4ec9b0', marginBottom: 3, fontWeight: 600 }}>
                 {s.document_title}{s.page_number ? ` — p.${s.page_number}` : ''}
               </div>
-              <div style={{ fontSize: 11, color: '#5a5a5a', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>
+              <div style={{
+                fontSize: 11, color: '#5a5a5a', fontStyle: 'italic',
+                overflow: 'hidden', display: '-webkit-box',
+                WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              } as React.CSSProperties}>
                 "{s.chunk_excerpt}"
               </div>
             </div>
@@ -58,23 +78,26 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    setDocFilter(defaultDocId)
-  }, [defaultDocId])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  useEffect(() => { setDocFilter(defaultDocId) }, [defaultDocId])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
-    if (!input.trim() || !course || sending) return
     const q = input.trim()
+    if (!q || !course || sending) return
     setInput('')
     setSending(true)
 
     const uid = crypto.randomUUID()
     const aid = crypto.randomUUID()
+
+    // Build history from current messages (last 6 turns max)
+    const recentMsgs = messages.filter(m => !m.loading).slice(-6)
+    const history = recentMsgs.map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.text,
+    }))
+
     setMessages(prev => [
       ...prev,
       { id: uid, role: 'user', text: q },
@@ -85,11 +108,12 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
       const res = await queryApi.ask(course.id, {
         question: q,
         document_id: docFilter ?? undefined,
+        history,
       })
       setMessages(prev =>
         prev.map(m =>
           m.id === aid
-            ? { ...m, text: res.answer, sources: res.sources, loading: false }
+            ? { ...m, text: res.answer, sources: res.sources, rewrittenQuery: res.rewritten_query, loading: false }
             : m,
         ),
       )
@@ -110,7 +134,7 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
   const canSend = !!input.trim() && !!course && !sending
 
   return (
-    <div style={{ width: 400, display: 'flex', flexDirection: 'column', background: '#1e1e1e', borderLeft: '1px solid #2d2d2d', flexShrink: 0 }}>
+    <div style={{ width: 420, display: 'flex', flexDirection: 'column', background: '#1e1e1e', borderLeft: '1px solid #2d2d2d', flexShrink: 0 }}>
       {/* Header */}
       <div style={{ height: 35, background: '#252526', borderBottom: '1px solid #2d2d2d', display: 'flex', alignItems: 'center', padding: '0 14px', gap: 8, flexShrink: 0 }}>
         <svg width="14" height="14" fill="none" stroke="#0e639c" strokeWidth="1.8" viewBox="0 0 24 24">
@@ -118,12 +142,7 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
         </svg>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#cccccc', flex: 1 }}>AI Chat</span>
         {messages.length > 0 && (
-          <button
-            onClick={() => setMessages([])}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', fontSize: 11 }}
-          >
-            clear
-          </button>
+          <button onClick={() => setMessages([])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#555', fontSize: 11 }}>clear</button>
         )}
       </div>
 
@@ -137,9 +156,7 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
             style={{ width: '100%', padding: '4px 8px', background: '#3c3c3c', border: '1px solid #555', borderRadius: 3, color: '#ccc', fontSize: 12, outline: 'none' }}
           >
             <option value="">All documents in {course.name}</option>
-            {readyDocs.map(d => (
-              <option key={d.id} value={d.id}>{d.title}</option>
-            ))}
+            {readyDocs.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
           </select>
         </div>
       )}
@@ -168,16 +185,9 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
             </div>
             {readyDocs.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 280 }}>
-                {[
-                  'What are the main topics covered?',
-                  'Summarise the key points',
-                  'What examples are given?',
-                ].map(s => (
-                  <button
-                    key={s}
-                    onClick={() => { setInput(s); textRef.current?.focus() }}
-                    style={{ padding: '7px 12px', background: '#252526', border: '1px solid #3c3c3c', borderRadius: 4, color: '#9d9d9d', fontSize: 12, cursor: 'pointer', textAlign: 'left' }}
-                  >
+                {['What are the main topics covered?', 'Summarise the key points', 'What examples are given?'].map(s => (
+                  <button key={s} onClick={() => { setInput(s); textRef.current?.focus() }}
+                    style={{ padding: '7px 12px', background: '#252526', border: '1px solid #3c3c3c', borderRadius: 4, color: '#9d9d9d', fontSize: 12, cursor: 'pointer', textAlign: 'left' }}>
                     {s}
                   </button>
                 ))}
@@ -200,7 +210,7 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
                       </svg>
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ padding: '8px 12px', background: '#252526', border: '1px solid #3c3c3c', borderRadius: '2px 12px 12px 12px', fontSize: 13, color: '#cccccc', lineHeight: 1.65 }}>
+                      <div style={{ padding: '10px 14px', background: '#252526', border: '1px solid #3c3c3c', borderRadius: '2px 12px 12px 12px', fontSize: 13, color: '#cccccc', lineHeight: 1.65 }}>
                         {msg.loading ? (
                           <div style={{ display: 'flex', gap: 4, alignItems: 'center', height: 20 }}>
                             {[0, 150, 300].map(d => (
@@ -208,11 +218,16 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
                             ))}
                           </div>
                         ) : (
-                          <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>
+                          <MarkdownContent text={msg.text} />
                         )}
                       </div>
                       {!msg.loading && msg.sources && msg.sources.length > 0 && (
                         <SourceList sources={msg.sources} />
+                      )}
+                      {msg.rewrittenQuery && msg.rewrittenQuery !== msg.text.slice(0, 80) && (
+                        <div style={{ fontSize: 10, color: '#3c3c3c', marginTop: 2, fontStyle: 'italic' }}>
+                          searched: "{msg.rewrittenQuery}"
+                        </div>
                       )}
                     </div>
                   </div>
@@ -237,7 +252,7 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
                 send(e as unknown as React.FormEvent)
               }
             }}
-            placeholder={course ? 'Ask about your documents… (Enter to send, Shift+Enter for newline)' : 'Select a course first'}
+            placeholder={course ? 'Ask about your documents… (Enter to send)' : 'Select a course first'}
             disabled={!course || sending}
             rows={2}
             style={{ flex: 1, padding: '8px 10px', background: '#3c3c3c', border: '1px solid #555', borderRadius: 4, color: '#ccc', fontSize: 13, outline: 'none', resize: 'none', fontFamily: 'inherit', lineHeight: 1.4 }}
@@ -258,13 +273,35 @@ export function ChatPanel({ course, readyDocs, defaultDocId }: Props) {
           </button>
         </form>
         <div style={{ fontSize: 10, color: '#3c3c3c', marginTop: 5, textAlign: 'center' }}>
-          {course ? `openai/gpt-oss-20b via Groq · ${readyDocs.length} indexed doc${readyDocs.length !== 1 ? 's' : ''}` : '—'}
+          {course ? `${settings.model} · ${readyDocs.length} doc${readyDocs.length !== 1 ? 's' : ''} indexed` : '—'}
         </div>
       </div>
 
+      {/* Markdown styles */}
       <style>{`
         @keyframes chatBounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
+        .md-content { color: #cccccc; font-size: 13px; line-height: 1.65; }
+        .md-content p { margin: 0 0 8px; }
+        .md-content p:last-child { margin-bottom: 0; }
+        .md-content code { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 3px; padding: 1px 5px; font-family: 'Consolas','Courier New',monospace; font-size: 12px; color: #ce9178; }
+        .md-content pre { background: #1e1e1e; border: 1px solid #3c3c3c; border-radius: 4px; padding: 10px 12px; overflow-x: auto; margin: 8px 0; }
+        .md-content pre code { background: none; border: none; padding: 0; color: #d4d4d4; font-size: 12px; }
+        .md-content strong { color: #ffffff; font-weight: 600; }
+        .md-content em { color: #9cdcfe; }
+        .md-content ul, .md-content ol { padding-left: 20px; margin: 6px 0; }
+        .md-content li { margin: 3px 0; }
+        .md-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+        .md-content th { background: #2d2d2d; color: #cccccc; padding: 6px 10px; border: 1px solid #3c3c3c; text-align: left; font-weight: 600; }
+        .md-content td { padding: 5px 10px; border: 1px solid #2d2d2d; color: #9d9d9d; }
+        .md-content tr:nth-child(even) td { background: #252526; }
+        .md-content h1,.md-content h2,.md-content h3 { color: #cccccc; font-weight: 600; margin: 10px 0 6px; }
+        .md-content blockquote { border-left: 3px solid #0e639c; padding-left: 10px; color: #9d9d9d; margin: 6px 0; }
+        .md-content a { color: #4ec9b0; }
+        .md-content hr { border: none; border-top: 1px solid #3c3c3c; margin: 8px 0; }
       `}</style>
     </div>
   )
 }
+
+// Expose model name for footer display
+const settings = { model: 'openai/gpt-oss-20b via Groq' }
