@@ -1,14 +1,8 @@
 import client from './client'
-import type { Course, CreateCourseRequest } from '@/types'
+import type { Course } from '@/types'
 
 export const coursesApi = {
-  list: async (): Promise<Course[]> => {
-    const res = await client.get<Course[]>('/courses')
-    return res.data
-  },
-
-  create: async (data: CreateCourseRequest): Promise<Course> => {
-    const res = await client.post<Course>('/courses', data)
-    return res.data
-  },
+  list: () => client.get<Course[]>('/courses').then(r => r.data),
+  create: (d: { name: string; description?: string }) =>
+    client.post<Course>('/courses', d).then(r => r.data),
 }
