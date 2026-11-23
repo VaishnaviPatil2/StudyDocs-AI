@@ -2,24 +2,15 @@ import client from './client'
 import type { Document } from '@/types'
 
 export const documentsApi = {
-  upload: async (courseId: number, file: File): Promise<Document> => {
+  upload: (courseId: number, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    const res = await client.post<Document>(
+    return client.post<Document>(
       `/courses/${courseId}/documents`,
       form,
       { headers: { 'Content-Type': 'multipart/form-data' } },
-    )
-    return res.data
+    ).then(r => r.data)
   },
-
-  list: async (courseId: number): Promise<Document[]> => {
-    const res = await client.get<Document[]>(`/courses/${courseId}/documents`)
-    return res.data
-  },
-
-  get: async (courseId: number, documentId: number): Promise<Document> => {
-    const res = await client.get<Document>(`/courses/${courseId}/documents/${documentId}`)
-    return res.data
-  },
+  list: (courseId: number) =>
+    client.get<Document[]>(`/courses/${courseId}/documents`).then(r => r.data),
 }

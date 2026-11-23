@@ -10,7 +10,6 @@ export interface AuthContextValue {
   logout: () => void
 }
 
-// oxlint-disable-next-line react/only-export-components -- context + provider must coexist
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -18,8 +17,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(
     localStorage.getItem('access_token'),
   )
-
-  // Derive loading from token+user instead of calling setState inside effect
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
@@ -29,10 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     authApi
       .me()
-      .then((me) => {
-        setUser(me)
-        setInitialized(true)
-      })
+      .then(me => { setUser(me); setInitialized(true) })
       .catch(() => {
         localStorage.removeItem('access_token')
         setToken(null)
@@ -41,9 +35,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function login(newToken: string) {
-    localStorage.setItem('access_token', newToken)
-    setToken(newToken)
+  async function login(t: string) {
+    localStorage.setItem('access_token', t)
+    setToken(t)
     const me = await authApi.me()
     setUser(me)
   }
