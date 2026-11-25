@@ -39,8 +39,14 @@ Strict rules:
    Re-read the context carefully before concluding something is missing.
 5. For true/false or yes/no questions where the context contradicts the premise,
    say No/Yes and explain using the context.
-6. Always cite the source document and page number at the end of your answer.
-7. Keep answers concise and factual. Do not pad with general knowledge."""
+6. For summary requests ("summarise", "main topics", "key points", "examples"),
+   be comprehensive — include ALL topics, examples, and sections mentioned
+   across ALL provided context chunks. Do not stop after listing a few.
+7. If the input contains garbled text, typos, or non-English words, interpret
+   the most likely intended question and answer it from the context.
+8. Do NOT output any HTML tags. Plain text and markdown only.
+9. Always cite the source document and page number at the end of your answer.
+10. Keep answers concise and factual. Do not pad with general knowledge."""
 
 _HUMAN_TEMPLATE = """\
 Context from uploaded documents:
@@ -106,9 +112,10 @@ def _call_groq(messages: list[dict], temperature: float = 0.1, max_tokens: int =
 def _rewrite_query(question: str, history: list[ChatMessage]) -> str:
     """
     Rewrite a follow-up question into a standalone query using conversation history.
-    Returns the original question if no history or rewriting fails.
+    Returns the original question if no history, too short, or rewriting fails.
     """
-    if not history:
+    # Don't rewrite if no history or question is long enough to be standalone
+    if not history or len(question.split()) > 6:
         return question
 
     # Only use last 4 turns to keep it focused
@@ -134,6 +141,12 @@ def _rewrite_query(question: str, history: list[ChatMessage]) -> str:
     except Exception as exc:
         logger.warning("Query rewrite failed (%s) — using original", exc)
         return question
+
+
+def _sanitise(text: str) -> str:
+    """Strip HTML tags from LLM output to prevent XSS."""
+    import re
+    return re.sub(r'<[^>]+>', '', text)
 
 
 def _build_context(
@@ -168,6 +181,7 @@ def answer_question(
     course_id: int | None = None,
     document_id: int | None = None,
     history: list[ChatMessage] | None = None,
+    top_k: int | None = None,
 ) -> RAGResponse:
     """
     Full RAG pipeline with query rewriting for follow-up questions.
@@ -183,12 +197,13 @@ def answer_question(
     # Step 1: rewrite follow-up into standalone query for retrieval
     search_query = _rewrite_query(question, history)
 
-    # Step 2: retrieve
+    # Step 2: retrieve (use override top_k for summary questions)
     chunks = retrieve_similar_chunks(
         query=search_query,
         db=db,
         course_id=course_id,
         document_id=document_id,
+        top_k=top_k,
     )
 
     if not chunks:
@@ -204,7 +219,7 @@ def answer_question(
 
     # Step 4: answer — use the ORIGINAL question (not rewritten) so the answer
     # directly addresses what the user asked
-    answer = _call_groq(
+    answer = _sanitise(_call_groq(
         messages=[
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": _HUMAN_TEMPLATE.format(
@@ -213,7 +228,7 @@ def answer_question(
         ],
         temperature=0.1,
         max_tokens=1024,
-    )
+    ))
 
     return RAGResponse(
         answer=answer,

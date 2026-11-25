@@ -29,12 +29,21 @@ def query_course(
     # Convert history items to ChatMessage objects
     history = [ChatMessage(role=h.role, content=h.content) for h in payload.history]
 
+    # Detect summary/overview questions — retrieve all chunks
+    summary_keywords = {"summarise", "summarize", "summary", "main topics",
+                        "key points", "overview", "examples", "all topics",
+                        "what does", "what is covered", "what are the main"}
+    q_lower = payload.question.lower()
+    is_summary = any(kw in q_lower for kw in summary_keywords)
+    top_k = None if is_summary else None  # None uses config default
+
     result = answer_question(
         question=payload.question,
         db=db,
         course_id=course_id,
         document_id=payload.document_id,
         history=history,
+        top_k=20 if is_summary else None,
     )
 
     return QueryResponse(
