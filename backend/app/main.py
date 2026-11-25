@@ -15,7 +15,17 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
+    # Pre-load BGE embedding model on startup so first query is not slow
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from app.services.embedding_service import embed_query
+        import asyncio
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, embed_query, "startup warmup")
+        logger.info("BGE embedding model pre-loaded successfully")
+    except Exception as exc:
+        logger.warning("BGE model pre-load failed (%s) — will load on first query", exc)
     yield
     # shutdown
 
